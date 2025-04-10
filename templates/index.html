@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSSATE College Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: url("{{ url_for('static', filename='images/background-image.png') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            height: 80vh; /* Increased the height for chat area */
+        }
+        #avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #8bc34a;
+            margin-bottom: 15px;
+            display: none; /* Hide by default */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #avatar.visible {
+            display: block; /* Show avatar when triggered */
+        }
+        .chat-history {
+            height: 70%; /* Increased the height for chat history */
+            overflow-y: scroll;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            padding: 8px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            width: 100%;
+        }
+        .user-message, .bot-message {
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .user-message {
+            background-color: #e0f7fa;
+            text-align: right;
+        }
+        .bot-message {
+            background-color: #f1f8e9;
+            text-align: left;
+        }
+        .chat-container form {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+        }
+        .chat-container input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .chat-container button {
+            padding: 8px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .chat-container button:hover {
+            background-color: #45a049;
+        }
+        #voice-btn {
+            background-color: #2196F3;
+        }
+        #voice-btn:hover {
+            background-color: #1976D2;
+        }
+        ol {
+            padding-left: 20px;
+            margin: 0;
+        }
+        ol li {
+            margin-bottom: 8px;
+        }
+        .logo-container img {
+            width: 120px; /* Decreased the size of the logo */
+            height: auto;
+            display: block;
+            margin-bottom: 15px;
+        }
+    </style>
+    <script>
+        function startSpeechRecognition() {
+            const avatar = document.getElementById('avatar');
+            avatar.classList.add('visible'); // Show avatar when speech recognition starts
+
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.start();
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('question').value = transcript;
+
+                // Hide avatar after speech is recognized
+                avatar.classList.remove('visible');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                alert('Speech recognition failed. Please try again.');
+                avatar.classList.remove('visible'); // Hide avatar on error
+            };
+
+            recognition.onend = () => {
+                console.log('Speech recognition ended.');
+                avatar.classList.remove('visible'); // Hide avatar after recognition ends
+            };
+        }
+
+        function scrollToBottom() {
+            const chatHistory = document.querySelector('.chat-history');
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        window.onload = scrollToBottom;
+    </script>
+</head>
+<body>
+
+    <div class="chat-container">
+        <!-- Avatar -->
+        <div id="avatar">
+            <img src="{{ url_for('static', filename='images/avatar.gif') }}" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%;">
+        </div>
+
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="College Logo" class="logo">
+        </div>
+        <h1>JSSATE College Chatbot</h1>
+        <div class="chat-history">
+            {% for message in chat_history %}
+                {% if message['type'] == 'user' %}
+                    <div class="user-message">{{ message['content'] }}</div>
+                {% elif message['type'] == 'bot' %}
+                    {% if message['content'] is iterable %}
+                        <div class="bot-message">
+                            <ol>
+                                {% for point in message['content'].split('\n') %}
+                                    <li>{{ point.strip() }}</li>
+                                {% endfor %}
+                            </ol>
+                        </div>
+                    {% else %}
+                        <div class="bot-message">{{ message['content'] }}</div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        </div>
+        <form action="/ask" method="post">
+            <input type="text" id="question" name="question" placeholder="Ask me anything..." required>
+            <button type="button" id="voice-btn" onclick="startSpeechRecognition()">Speak</button>
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <script>
+        const chatHistory = document.querySelector('.chat-history');
+        const observer = new MutationObserver(scrollToBottom);
+        observer.observe(chatHistory, { childList: true });
+    </script>
+
+</body>
+</html>
+
